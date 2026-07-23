@@ -433,12 +433,11 @@
   <div class="modal">
     <h2>Вход для автора</h2>
     <p class="hint">
-      Вставьте personal access token GitHub с правом записи (Contents: Read and write)
-      для репозитория этого сайта. Токен сохраняется только в вашем браузере и никуда,
-      кроме GitHub API, не отправляется.
+      Введите пароль автора. Он расшифровывает ключ доступа прямо в браузере —
+      ключ нигде не хранится в открытом виде и не отправляется на сторонние серверы.
     </p>
-    <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
-    <p class="modal-error" id="modalError">Не получилось подтвердить токен. Проверьте, что он верный и имеет доступ к репозиторию.</p>
+    <input type="password" id="tokenInput" placeholder="Пароль" autocomplete="off">
+    <p class="modal-error" id="modalError">Неверный пароль.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="modalCancel" type="button">Отмена</button>
       <button class="btn btn-publish" id="modalSubmit" type="button">Войти</button>
@@ -453,8 +452,8 @@
    НАСТРОЙКА — поменяйте эти три поля под свой репозиторий
    ========================================================= */
 const CONFIG = {
-  owner: "Fo2ya1min",   // ваш логин на GitHub
-  repo: "gorodcop",          // имя репозитория с этим сайтом
+  owner: "YOUR_GITHUB_USERNAME",   // ваш логин на GitHub
+  repo: "YOUR_REPO_NAME",          // имя репозитория с этим сайтом
   branch: "main",                  // ветка (обычно main)
   postsPath: "posts.json",         // файл, где хранятся записи
   siteTitle: "Журнал",             // заголовок сайта
@@ -618,6 +617,47 @@ async function ghPut(posts, message){
   latestSha = data.content.sha;
 }
 
+/* ---------- Password -> token decryption (Web Crypto) ---------- */
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+let _authConfigCache = null;
+async function fetchAuthConfig(){
+  if (_authConfigCache) return _authConfigCache;
+  const res = await fetch('./auth.json', { cache: 'no-store' });
+  if (!res.ok) throw new Error('auth.json не найден (сайт не задеплоен через Actions?)');
+  _authConfigCache = await res.json();
+  return _authConfigCache;
+}
+
+async function deriveKey(password, saltB64, iterations){
+  const enc = new TextEncoder();
+  const salt = b64ToBytes(saltB64);
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+}
+
+async function decryptTokenWithPassword(password){
+  const cfg = await fetchAuthConfig();
+  const key = await deriveKey(password, cfg.salt, cfg.iterations);
+  const iv = b64ToBytes(cfg.iv);
+  const data = b64ToBytes(cfg.ciphertext);
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data); // бросит исключение при неверном пароле
+  return new TextDecoder().decode(plainBuf);
+}
+
 async function verifyToken(token){
   const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
@@ -686,22 +726,26 @@ els.modalBackdrop.addEventListener('click', (e) => {
 });
 
 els.modalSubmit.addEventListener('click', async () => {
-  const token = els.tokenInput.value.trim();
-  if (!token) return;
+  const password = els.tokenInput.value;
+  if (!password) return;
   els.modalSubmit.disabled = true;
   els.modalSubmit.textContent = 'Проверяем…';
-  const ok = await verifyToken(token);
-  els.modalSubmit.disabled = false;
-  els.modalSubmit.textContent = 'Войти';
-  if (!ok){
+  els.modalError.classList.remove('show');
+  try{
+    const token = await decryptTokenWithPassword(password);
+    const ok = await verifyToken(token);
+    if (!ok) throw new Error('token rejected by GitHub');
+    TOKEN = token;
+    sessionStorage.setItem('gh_token', token);
+    els.modalBackdrop.classList.remove('open');
+    setAdminUI(true);
+    showToast('Добро пожаловать. Теперь можно публиковать записи.');
+  }catch(err){
     els.modalError.classList.add('show');
-    return;
+  }finally{
+    els.modalSubmit.disabled = false;
+    els.modalSubmit.textContent = 'Войти';
   }
-  TOKEN = token;
-  sessionStorage.setItem('gh_token', token);
-  els.modalBackdrop.classList.remove('open');
-  setAdminUI(true);
-  showToast('Добро пожаловать. Теперь можно публиковать записи.');
 });
 
 els.logoutBtn.addEventListener('click', () => {

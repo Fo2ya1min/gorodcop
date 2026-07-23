@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Журнал</title>
+<meta name="description" content="Открытый журнал записей">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3EEE3;
+    --paper-soft:#EAE2D2;
+    --card:#FBF8F1;
+    --ink:#1C2B33;
+    --ink-soft:#5B6B72;
+    --accent:#B8863B;
+    --accent-2:#1F5C5B;
+    --line: rgba(28,43,51,0.14);
+    --dark-bg:#12232E;
+    --dark-bg-2:#0D1B24;
+    --dark-text:#F2E9D8;
+    --dark-line: rgba(242,233,216,0.14);
+    --danger:#A6432F;
+    --radius: 16px;
+    --shadow: 0 12px 32px rgba(18,35,46,0.10);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection{ background: var(--accent); color:#fff; }
+  a{ color:inherit; }
+
+  .wrap{
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+  }
+
+  /* ---------- Header ---------- */
+  header.site{
+    padding: 56px 0 36px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .brand h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size: clamp(32px, 6vw, 44px);
+    letter-spacing:-0.01em;
+    margin:0 0 6px;
+  }
+  .brand p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:15px;
+    max-width: 46ch;
+  }
+  .author-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+    padding:9px 14px;
+    border-radius:999px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    white-space:nowrap;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+    flex-shrink:0;
+    margin-top:6px;
+  }
+  .author-toggle:hover{ border-color: var(--accent); color: var(--ink); }
+  .author-toggle:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline: 2px solid var(--accent-2);
+    outline-offset: 2px;
+  }
+  .author-toggle .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--ink-soft);
+    flex-shrink:0;
+  }
+  body.is-admin .author-toggle{ border-color: var(--accent-2); color: var(--accent-2); }
+  body.is-admin .author-toggle .dot{ background: var(--accent-2); box-shadow:0 0 0 3px rgba(31,92,91,0.15); }
+
+  /* ---------- Composer (author desk) ---------- */
+  .composer{
+    display:none;
+    background: linear-gradient(180deg, var(--dark-bg) 0%, var(--dark-bg-2) 100%);
+    color: var(--dark-text);
+    border-radius: var(--radius);
+    padding: 26px 26px 22px;
+    margin: 28px 0 8px;
+    box-shadow: var(--shadow);
+  }
+  body.is-admin .composer{ display:block; }
+  .composer .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color: #9FC6C5;
+    margin:0 0 14px;
+  }
+  .composer input[type="text"]{
+    width:100%;
+    background:transparent;
+    border:none;
+    border-bottom: 1px solid var(--dark-line);
+    color: var(--dark-text);
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:500;
+    padding: 6px 2px 12px;
+    margin-bottom: 14px;
+  }
+  .composer input[type="text"]::placeholder{ color: rgba(242,233,216,0.35); }
+  .composer textarea{
+    width:100%;
+    min-height: 140px;
+    background:transparent;
+    border:none;
+    color: var(--dark-text);
+    font-family:'Inter', sans-serif;
+    font-size:15.5px;
+    line-height:1.6;
+    resize: vertical;
+    padding: 4px 2px;
+  }
+  .composer textarea::placeholder{ color: rgba(242,233,216,0.35); }
+  .composer-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top: 16px;
+    padding-top:14px;
+    border-top: 1px solid var(--dark-line);
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border:none;
+    border-radius:999px;
+    padding:11px 20px;
+    cursor:pointer;
+    transition: transform .1s ease, opacity .15s ease;
+  }
+  .btn:active{ transform: scale(0.97); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-publish{ background: var(--accent); color: #fff; }
+  .btn-publish:hover:not(:disabled){ opacity:.9; }
+  .btn-ghost{
+    background:transparent;
+    border:1px solid var(--dark-line);
+    color: var(--dark-text);
+  }
+  .btn-ghost:hover{ border-color: var(--accent); }
+
+  /* ---------- Login modal ---------- */
+  .modal-backdrop{
+    display:none;
+    position:fixed; inset:0;
+    background: rgba(13,27,36,0.55);
+    backdrop-filter: blur(2px);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:50;
+  }
+  .modal-backdrop.open{ display:flex; }
+  .modal{
+    background: linear-gradient(180deg, var(--dark-bg) 0%, var(--dark-bg-2) 100%);
+    color: var(--dark-text);
+    border-radius: var(--radius);
+    padding: 30px 28px;
+    max-width: 420px;
+    width:100%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  }
+  .modal h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:24px;
+    margin:0 0 8px;
+  }
+  .modal p.hint{
+    color:#B9C3C3;
+    font-size:13.5px;
+    line-height:1.55;
+    margin: 0 0 18px;
+  }
+  .modal input[type="password"]{
+    width:100%;
+    background: rgba(255,255,255,0.06);
+    border:1px solid var(--dark-line);
+    border-radius:10px;
+    color: var(--dark-text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    padding: 12px 14px;
+    margin-bottom:14px;
+  }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .modal-error{
+    color:#E4A190;
+    font-size:13px;
+    margin: -6px 0 14px;
+    display:none;
+  }
+  .modal-error.show{ display:block; }
+
+  /* ---------- Feed ---------- */
+  .feed{
+    margin-top: 36px;
+    position:relative;
+  }
+  .feed::before{
+    content:"";
+    position:absolute;
+    left: 5px;
+    top: 10px;
+    bottom: 10px;
+    width:1px;
+    background: var(--line);
+  }
+  article.post{
+    position:relative;
+    padding: 0 0 34px 34px;
+  }
+  article.post::before{
+    content:"";
+    position:absolute;
+    left:0px;
+    top:8px;
+    width:11px; height:11px;
+    border-radius:50%;
+    background: var(--card);
+    border: 2px solid var(--accent);
+  }
+  .post-card{
+    background: var(--card);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px 20px;
+    box-shadow: var(--shadow);
+  }
+  .post-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .post-meta time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color: var(--ink-soft);
+    letter-spacing:0.02em;
+  }
+  .post-id{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color: var(--accent);
+    opacity:0.8;
+  }
+  .post-card h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 24px;
+    line-height:1.25;
+    margin: 0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  .post-card .body{
+    font-size:16px;
+    line-height:1.7;
+    color: var(--ink);
+  }
+  .post-card .body p{ margin:0 0 12px; }
+  .post-card .body p:last-child{ margin-bottom:0; }
+  .post-actions{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    display:none;
+  }
+  body.is-admin .post-actions{ display:flex; justify-content:flex-end; }
+  .btn-delete{
+    background:transparent;
+    border:1px solid rgba(166,67,47,0.35);
+    color: var(--danger);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:7px 13px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .btn-delete:hover{ background: rgba(166,67,47,0.08); }
+
+  /* ---------- Empty / loading / setup states ---------- */
+  .state-box{
+    text-align:center;
+    padding: 60px 20px;
+    color: var(--ink-soft);
+  }
+  .state-box h3{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    color: var(--ink);
+    margin:0 0 8px;
+  }
+  .setup-banner{
+    background: var(--paper-soft);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding:18px 22px;
+    margin: 24px 0;
+    font-size:14px;
+    line-height:1.6;
+    color: var(--ink-soft);
+  }
+  .setup-banner strong{ color: var(--ink); }
+  .setup-banner code{
+    background: rgba(28,43,51,0.06);
+    padding:2px 6px;
+    border-radius:5px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+  }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed;
+    left:50%;
+    bottom:28px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    padding: 13px 20px;
+    border-radius: 999px;
+    font-size:13.5px;
+    font-family:'Inter', sans-serif;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 60;
+    max-width: 90vw;
+    text-align:center;
+  }
+  #toast.show{
+    opacity:1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  footer.site{
+    text-align:center;
+    padding: 40px 0 10px;
+    color: var(--ink-soft);
+    font-size:12.5px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  @media (max-width: 560px){
+    header.site{ flex-direction:column; }
+    .wrap{ padding: 0 16px 100px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="site">
+    <div class="brand">
+      <h1 id="siteTitle">Журнал</h1>
+      <p id="siteTagline">Открытые записи. Читает любой, пишет автор.</p>
+    </div>
+    <button class="author-toggle" id="authorToggle">
+      <span class="dot"></span>
+      <span id="authorToggleLabel">Вход для автора</span>
+    </button>
+  </header>
+
+  <section class="composer" id="composer">
+    <p class="eyebrow">Новая запись</p>
+    <input type="text" id="postTitle" placeholder="Заголовок" maxlength="140">
+    <textarea id="postBody" placeholder="О чём хотите написать?"></textarea>
+    <div class="composer-footer">
+      <button class="btn btn-ghost" id="logoutBtn" type="button">Выйти</button>
+      <button class="btn btn-publish" id="publishBtn" type="button">Опубликовать</button>
+    </div>
+  </section>
+
+  <div id="setupBanner" class="setup-banner" style="display:none;"></div>
+
+  <main class="feed" id="feed">
+    <div class="state-box" id="loadingState">
+      <h3>Загружаем записи…</h3>
+    </div>
+  </main>
+
+  <footer class="site">записи хранятся в репозитории на GitHub</footer>
+</div>
+
+<!-- Login modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h2>Вход для автора</h2>
+    <p class="hint">
+      Вставьте personal access token GitHub с правом записи (Contents: Read and write)
+      для репозитория этого сайта. Токен сохраняется только в вашем браузере и никуда,
+      кроме GitHub API, не отправляется.
+    </p>
+    <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
+    <p class="modal-error" id="modalError">Не получилось подтвердить токен. Проверьте, что он верный и имеет доступ к репозиторию.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancel" type="button">Отмена</button>
+      <button class="btn btn-publish" id="modalSubmit" type="button">Войти</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   НАСТРОЙКА — поменяйте эти три поля под свой репозиторий
+   ========================================================= */
+const CONFIG = {
+  owner: "YOUR_GITHUB_USERNAME",   // ваш логин на GitHub
+  repo: "YOUR_REPO_NAME",          // имя репозитория с этим сайтом
+  branch: "main",                  // ветка (обычно main)
+  postsPath: "posts.json",         // файл, где хранятся записи
+  siteTitle: "Журнал",             // заголовок сайта
+  siteTagline: "Открытые записи. Читает любой, пишет автор."
+};
+/* ========================================================= */
+
+document.getElementById('siteTitle').textContent = CONFIG.siteTitle;
+document.getElementById('siteTagline').textContent = CONFIG.siteTagline;
+document.title = CONFIG.siteTitle;
+
+const els = {
+  feed: document.getElementById('feed'),
+  authorToggle: document.getElementById('authorToggle'),
+  authorToggleLabel: document.getElementById('authorToggleLabel'),
+  composer: document.getElementById('composer'),
+  postTitle: document.getElementById('postTitle'),
+  postBody: document.getElementById('postBody'),
+  publishBtn: document.getElementById('publishBtn'),
+  logoutBtn: document.getElementById('logoutBtn'),
+  modalBackdrop: document.getElementById('modalBackdrop'),
+  tokenInput: document.getElementById('tokenInput'),
+  modalSubmit: document.getElementById('modalSubmit'),
+  modalCancel: document.getElementById('modalCancel'),
+  modalError: document.getElementById('modalError'),
+  toast: document.getElementById('toast'),
+  setupBanner: document.getElementById('setupBanner'),
+};
+
+let TOKEN = sessionStorage.getItem('gh_token') || null;
+let latestSha = null; // sha of posts.json, needed to write
+
+function isConfigured(){
+  return CONFIG.owner !== "YOUR_GITHUB_USERNAME" && CONFIG.repo !== "YOUR_REPO_NAME";
+}
+
+function showToast(msg, ms = 3200){
+  els.toast.textContent = msg;
+  els.toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => els.toast.classList.remove('show'), ms);
+}
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+function renderBody(text){
+  return text.split(/\n{2,}/).map(p =>
+    `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`
+  ).join('');
+}
+
+function formatDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' }) +
+         ' · ' + d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+}
+
+function setAdminUI(on){
+  document.body.classList.toggle('is-admin', on);
+  els.authorToggleLabel.textContent = on ? 'Вы автор' : 'Вход для автора';
+}
+
+/* ---------- Reading (public, no auth) ---------- */
+async function loadPosts(){
+  if (!isConfigured()){
+    els.setupBanner.style.display = 'block';
+    els.setupBanner.innerHTML = `
+      <strong>Сайт почти готов.</strong> Откройте <code>index.html</code> и в блоке
+      <code>CONFIG</code> укажите ваш GitHub-логин и название репозитория, затем создайте
+      в репозитории файл <code>posts.json</code> с содержимым <code>[]</code>.
+      Подробности — в <code>README.md</code>.`;
+    els.feed.innerHTML = '';
+    return;
+  }
+
+  try{
+    const url = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}/${CONFIG.postsPath}?t=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('not found');
+    const posts = await res.json();
+    renderFeed(posts);
+  }catch(err){
+    els.feed.innerHTML = `
+      <div class="state-box">
+        <h3>Пока нет ни одной записи</h3>
+        <p>Как только автор опубликует первый текст, он появится здесь.</p>
+      </div>`;
+  }
+}
+
+function renderFeed(posts){
+  if (!posts || posts.length === 0){
+    els.feed.innerHTML = `
+      <div class="state-box">
+        <h3>Здесь пока пусто</h3>
+        <p>Как только автор опубликует первый текст, он появится здесь.</p>
+      </div>`;
+    return;
+  }
+  const sorted = [...posts].sort((a,b) => new Date(b.date) - new Date(a.date));
+  els.feed.innerHTML = sorted.map(post => `
+    <article class="post" data-id="${post.id}">
+      <div class="post-card">
+        <div class="post-meta">
+          <time>${formatDate(post.date)}</time>
+          <span class="post-id">#${post.id}</span>
+        </div>
+        <h2>${escapeHtml(post.title)}</h2>
+        <div class="body">${renderBody(post.body)}</div>
+        <div class="post-actions">
+          <button class="btn-delete" data-delete="${post.id}">Удалить запись</button>
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  els.feed.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deletePost(btn.dataset.delete));
+  });
+}
+
+/* ---------- GitHub API helpers (admin only) ---------- */
+async function ghGet(){
+  const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}?ref=${CONFIG.branch}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json' }
+  });
+  if (!res.ok) throw new Error('Не удалось получить posts.json (' + res.status + ')');
+  const data = await res.json();
+  latestSha = data.sha;
+  const decoded = decodeURIComponent(escape(atob(data.content)));
+  return JSON.parse(decoded || '[]');
+}
+
+async function ghPut(posts, message){
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(posts, null, 2))));
+  const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message,
+      content: encoded,
+      sha: latestSha,
+      branch: CONFIG.branch
+    })
+  });
+  if (!res.ok){
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || ('Ошибка записи (' + res.status + ')'));
+  }
+  const data = await res.json();
+  latestSha = data.content.sha;
+}
+
+async function verifyToken(token){
+  const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+  });
+  return res.ok;
+}
+
+/* ---------- Admin actions ---------- */
+async function publishPost(){
+  const title = els.postTitle.value.trim();
+  const body = els.postBody.value.trim();
+  if (!title || !body){
+    showToast('Добавьте заголовок и текст записи');
+    return;
+  }
+  els.publishBtn.disabled = true;
+  els.publishBtn.textContent = 'Публикуем…';
+  try{
+    const posts = await ghGet();
+    const newPost = {
+      id: Math.random().toString(16).slice(2, 9),
+      title, body,
+      date: new Date().toISOString()
+    };
+    posts.push(newPost);
+    await ghPut(posts, `Новая запись: ${title}`);
+    els.postTitle.value = '';
+    els.postBody.value = '';
+    renderFeed(posts);
+    showToast('Опубликовано. Читателям запись станет видна в течение пары минут.');
+  }catch(err){
+    showToast('Не получилось опубликовать: ' + err.message, 4500);
+  }finally{
+    els.publishBtn.disabled = false;
+    els.publishBtn.textContent = 'Опубликовать';
+  }
+}
+
+async function deletePost(id){
+  if (!confirm('Удалить эту запись без возможности восстановления?')) return;
+  try{
+    const posts = await ghGet();
+    const filtered = posts.filter(p => p.id !== id);
+    await ghPut(filtered, `Удалена запись #${id}`);
+    renderFeed(filtered);
+    showToast('Запись удалена.');
+  }catch(err){
+    showToast('Не получилось удалить: ' + err.message, 4500);
+  }
+}
+
+/* ---------- Auth flow ---------- */
+els.authorToggle.addEventListener('click', () => {
+  if (document.body.classList.contains('is-admin')){
+    return; // already admin, toggle button just shows status now
+  }
+  els.modalBackdrop.classList.add('open');
+  els.tokenInput.value = '';
+  els.modalError.classList.remove('show');
+  els.tokenInput.focus();
+});
+
+els.modalCancel.addEventListener('click', () => els.modalBackdrop.classList.remove('open'));
+els.modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === els.modalBackdrop) els.modalBackdrop.classList.remove('open');
+});
+
+els.modalSubmit.addEventListener('click', async () => {
+  const token = els.tokenInput.value.trim();
+  if (!token) return;
+  els.modalSubmit.disabled = true;
+  els.modalSubmit.textContent = 'Проверяем…';
+  const ok = await verifyToken(token);
+  els.modalSubmit.disabled = false;
+  els.modalSubmit.textContent = 'Войти';
+  if (!ok){
+    els.modalError.classList.add('show');
+    return;
+  }
+  TOKEN = token;
+  sessionStorage.setItem('gh_token', token);
+  els.modalBackdrop.classList.remove('open');
+  setAdminUI(true);
+  showToast('Добро пожаловать. Теперь можно публиковать записи.');
+});
+
+els.logoutBtn.addEventListener('click', () => {
+  TOKEN = null;
+  sessionStorage.removeItem('gh_token');
+  setAdminUI(false);
+});
+
+els.publishBtn.addEventListener('click', publishPost);
+
+/* ---------- Init ---------- */
+(async function init(){
+  await loadPosts();
+  if (TOKEN){
+    const ok = await verifyToken(TOKEN);
+    if (ok) setAdminUI(true);
+    else { sessionStorage.removeItem('gh_token'); TOKEN = null; }
+  }
+})();
+</script>
+
+</body>
+</html>
